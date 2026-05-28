@@ -7,10 +7,11 @@ import (
 )
 
 type User struct {
-	ID        uuid.UUID `json:"id"`
-	Name      string    `json:"name"`
-	Email     string    `json:"email"`
-	PublicKey string    `json:"public_key"`
+	ID          uuid.UUID `json:"id"`
+	Name        string    `json:"name"`         // Nom défini par shcc name
+	DisplayName string    `json:"display_name"` // Nom issu de Claude Code
+	Email       string    `json:"email"`
+	PublicKey   string    `json:"public_key"`
 }
 
 type Share struct {

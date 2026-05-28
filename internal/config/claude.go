@@ -13,25 +13,44 @@ import (
 type ClaudeConfig struct {
 	OAuthAccount struct {
 		EmailAddress string `json:"emailAddress"`
+		DisplayName  string `json:"displayName"`
 	} `json:"oauthAccount"`
 }
 
 // GetUserEmail extrait l'email de ~/.claude.json
 func GetUserEmail() (string, error) {
+	config, err := ReadClaudeConfig()
+	if err != nil {
+		return "", err
+	}
+	return config.OAuthAccount.EmailAddress, nil
+}
+
+// GetUserDisplayName extrait le nom d'affichage de ~/.claude.json
+func GetUserDisplayName() (string, error) {
+	config, err := ReadClaudeConfig()
+	if err != nil {
+		return "", err
+	}
+	return config.OAuthAccount.DisplayName, nil
+}
+
+// ReadClaudeConfig lit et parse le fichier ~/.claude.json
+func ReadClaudeConfig() (*ClaudeConfig, error) {
 	home := system.GetHomeDir()
 	configPath := filepath.Join(home, ".claude.json")
 
 	data, err := os.ReadFile(configPath)
 	if err != nil {
-		return "", fmt.Errorf("impossible de lire %s: %w", configPath, err)
+		return nil, fmt.Errorf("impossible de lire %s: %w", configPath, err)
 	}
 
 	var config ClaudeConfig
 	if err := json.Unmarshal(data, &config); err != nil {
-		return "", fmt.Errorf("erreur de parsing %s: %w", configPath, err)
+		return nil, fmt.Errorf("erreur de parsing %s: %w", configPath, err)
 	}
 
-	return config.OAuthAccount.EmailAddress, nil
+	return &config, nil
 }
 
 // GetCredentials lit le contenu du fichier de credentials

@@ -116,11 +116,13 @@ func handleUser(w http.ResponseWriter, r *http.Request) {
 
 		// Upsert sur email
 		_, err := database.Pool.Exec(ctx, 
-			`INSERT INTO users (id, name, email, public_key) 
-			 VALUES ($1, $2, $3, $4)
+			`INSERT INTO users (id, name, display_name, email, public_key) 
+			 VALUES ($1, $2, $3, $4, $5)
 			 ON CONFLICT (email) DO UPDATE 
-			 SET name = EXCLUDED.name, public_key = EXCLUDED.public_key`,
-			uuid.New(), u.Name, u.Email, u.PublicKey)
+			 SET name = EXCLUDED.name, 
+			     display_name = EXCLUDED.display_name, 
+			     public_key = EXCLUDED.public_key`,
+			uuid.New(), u.Name, u.DisplayName, u.Email, u.PublicKey)
 
 		if err != nil {
 			log.Printf("Erreur upsert user: %v", err)
@@ -128,7 +130,7 @@ func handleUser(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		w.WriteHeader(http.StatusOK)
+		w.WriteHeader(http.StatusCreated)
 
 	case http.MethodGet:
 		email := r.URL.Query().Get("email")
@@ -137,11 +139,11 @@ func handleUser(w http.ResponseWriter, r *http.Request) {
 		var u api.User
 		var err error
 		if email != "" {
-			err = database.Pool.QueryRow(ctx, "SELECT id, name, email, public_key FROM users WHERE email = $1", email).
-				Scan(&u.ID, &u.Name, &u.Email, &u.PublicKey)
+			err = database.Pool.QueryRow(ctx, "SELECT id, name, display_name, email, public_key FROM users WHERE email = $1", email).
+				Scan(&u.ID, &u.Name, &u.DisplayName, &u.Email, &u.PublicKey)
 		} else if name != "" {
-			err = database.Pool.QueryRow(ctx, "SELECT id, name, email, public_key FROM users WHERE name = $1", name).
-				Scan(&u.ID, &u.Name, &u.Email, &u.PublicKey)
+			err = database.Pool.QueryRow(ctx, "SELECT id, name, display_name, email, public_key FROM users WHERE name = $1", name).
+				Scan(&u.ID, &u.Name, &u.DisplayName, &u.Email, &u.PublicKey)
 		} else {
 			http.Error(w, "Email ou nom manquant", http.StatusBadRequest)
 			return

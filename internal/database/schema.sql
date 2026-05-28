@@ -3,6 +3,7 @@
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY,
     name VARCHAR(255),
+    display_name VARCHAR(255),
     email VARCHAR(255) UNIQUE NOT NULL,
     public_key TEXT,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
