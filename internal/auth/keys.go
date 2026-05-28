@@ -13,7 +13,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/shcc/shcc/internal/system"
+	"github.com/mendoc/shcc/internal/system"
 )
 
 const (

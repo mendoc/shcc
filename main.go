@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/shcc/shcc/internal/api"
-	"github.com/shcc/shcc/internal/auth"
-	"github.com/shcc/shcc/internal/config"
-	"github.com/shcc/shcc/internal/system"
+	"github.com/mendoc/shcc/internal/api"
+	"github.com/mendoc/shcc/internal/auth"
+	"github.com/mendoc/shcc/internal/config"
+	"github.com/mendoc/shcc/internal/system"
 )
 
 const version = "1.0.0"

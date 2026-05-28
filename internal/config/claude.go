@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/shcc/shcc/internal/system"
+	"github.com/mendoc/shcc/internal/system"
 )
 
 type ClaudeConfig struct {
