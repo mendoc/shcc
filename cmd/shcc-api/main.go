@@ -1,15 +1,27 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/mendoc/shcc/internal/api"
+	"github.com/mendoc/shcc/internal/database"
 )
 
 func main() {
-	// Récupération du port via variable d'env (standard Cloud Run)
+	// Connexion à la base de données
+	if err := database.Connect(); err != nil {
+		log.Printf("Attention: Connexion DB échouée: %v (L'API tournera en mode dégradé)", err)
+	} else {
+		defer database.Close()
+		log.Println("Connecté à PostgreSQL")
+	}
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
@@ -33,18 +45,116 @@ func handleStatus(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleShare(w http.ResponseWriter, r *http.Request) {
-	if r.Method == http.MethodPost {
-		fmt.Fprintln(w, "Endpoint POST /share (à implémenter)")
-		return
+	ctx := context.Background()
+	switch r.Method {
+	case http.MethodPost:
+		var s api.Share
+		if err := json.NewDecoder(r.Body).Decode(&s); err != nil {
+			http.Error(w, "JSON invalide", http.StatusBadRequest)
+			return
+		}
+
+		s.ID = uuid.New()
+		s.CreatedAt = time.Now()
+		// expired_at devrait être passé dans le JSON ou calculé
+
+		_, err := database.Pool.Exec(ctx, 
+			"INSERT INTO shares (id, owner, \"to\", credentials, created_at, expired_at) VALUES ($1, $2, $3, $4, $5, $6)",
+			s.ID, s.Owner, s.To, s.Credentials, s.CreatedAt, s.ExpiredAt)
+		
+		if err != nil {
+			log.Printf("Erreur insertion share: %v", err)
+			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusCreated)
+		json.NewEncoder(w).Encode(s)
+
+	case http.MethodGet:
+		to := r.URL.Query().Get("to")
+		if to == "" {
+			http.Error(w, "Paramètre 'to' manquant", http.StatusBadRequest)
+			return
+		}
+
+		rows, err := database.Pool.Query(ctx, 
+			"SELECT id, owner, \"to\", credentials, created_at, expired_at FROM shares WHERE \"to\" = $1 AND expired_at > NOW()", 
+			to)
+		if err != nil {
+			log.Printf("Erreur query shares: %v", err)
+			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+			return
+		}
+		defer rows.Close()
+
+		var shares []api.Share
+		for rows.Next() {
+			var s api.Share
+			if err := rows.Scan(&s.ID, &s.Owner, &s.To, &s.Credentials, &s.CreatedAt, &s.ExpiredAt); err != nil {
+				continue
+			}
+			shares = append(shares, s)
+		}
+
+		json.NewEncoder(w).Encode(shares)
+
+	default:
+		http.Error(w, "Méthode non autorisée", http.StatusMethodNotAllowed)
 	}
-	if r.Method == http.MethodGet {
-		fmt.Fprintln(w, "Endpoint GET /share (à implémenter)")
-		return
-	}
-	http.Error(w, "Méthode non autorisée", http.StatusMethodNotAllowed)
 }
 
 func handleUser(w http.ResponseWriter, r *http.Request) {
-	// Pour récupérer la clé publique de l'utilisateur
-	fmt.Fprintln(w, "Endpoint /user (à implémenter)")
+	ctx := context.Background()
+	switch r.Method {
+	case http.MethodPost:
+		var u api.User
+		if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
+			http.Error(w, "JSON invalide", http.StatusBadRequest)
+			return
+		}
+
+		// Upsert sur email
+		_, err := database.Pool.Exec(ctx, 
+			`INSERT INTO users (id, name, email, public_key) 
+			 VALUES ($1, $2, $3, $4)
+			 ON CONFLICT (email) DO UPDATE 
+			 SET name = EXCLUDED.name, public_key = EXCLUDED.public_key`,
+			uuid.New(), u.Name, u.Email, u.PublicKey)
+
+		if err != nil {
+			log.Printf("Erreur upsert user: %v", err)
+			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+			return
+		}
+
+		w.WriteHeader(http.StatusOK)
+
+	case http.MethodGet:
+		email := r.URL.Query().Get("email")
+		name := r.URL.Query().Get("name")
+		
+		var u api.User
+		var err error
+		if email != "" {
+			err = database.Pool.QueryRow(ctx, "SELECT id, name, email, public_key FROM users WHERE email = $1", email).
+				Scan(&u.ID, &u.Name, &u.Email, &u.PublicKey)
+		} else if name != "" {
+			err = database.Pool.QueryRow(ctx, "SELECT id, name, email, public_key FROM users WHERE name = $1", name).
+				Scan(&u.ID, &u.Name, &u.Email, &u.PublicKey)
+		} else {
+			http.Error(w, "Email ou nom manquant", http.StatusBadRequest)
+			return
+		}
+
+		if err != nil {
+			http.Error(w, "Utilisateur introuvable", http.StatusNotFound)
+			return
+		}
+
+		json.NewEncoder(w).Encode(u)
+
+	default:
+		http.Error(w, "Méthode non autorisée", http.StatusMethodNotAllowed)
+	}
 }
