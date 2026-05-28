@@ -57,12 +57,17 @@ func syncUser() {
 	pubKey, _ := auth.GetPublicKey()
 	shccCfg, _ := config.ReadShccConfig()
 
+	// Le nom envoyé à l'API est soit le nom personnalisé shcc, soit le displayName Claude
+	finalName := dname
+	if shccCfg.Name != "" {
+		finalName = shccCfg.Name
+	}
+
 	if email != "" && pubKey != "" {
 		_ = api.RegisterUser(api.User{
-			Email:       email,
-			DisplayName: dname,
-			Name:        shccCfg.Name,
-			PublicKey:   pubKey,
+			Email:     email,
+			Name:      finalName,
+			PublicKey: pubKey,
 		})
 	}
 }
@@ -81,13 +86,11 @@ func handleSetName(name string) {
 
 	// Forcer une synchro immédiate
 	email, _ := config.GetUserEmail()
-	dname, _ := config.GetUserDisplayName()
 	pubKey, _ := auth.GetPublicKey()
 	err = api.RegisterUser(api.User{
-		Email:       email,
-		DisplayName: dname,
-		Name:        name,
-		PublicKey:   pubKey,
+		Email:     email,
+		Name:      name,
+		PublicKey: pubKey,
 	})
 
 	if err != nil {
@@ -106,7 +109,7 @@ func handleShare(recipientIdentifier string) {
 		return
 	}
 
-	fmt.Printf("📧 Utilisateur trouvé : %s (%s)\n", destUser.DisplayName, destUser.Email)
+	fmt.Printf("📧 Utilisateur trouvé : %s (%s)\n", destUser.Name, destUser.Email)
 
 	ownerEmail, err := config.GetUserEmail()
 	if err != nil {
