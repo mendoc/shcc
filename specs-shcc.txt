@@ -1,0 +1,77 @@
+Je souhaite rédiger un cahier des charges pour un agent de code Gemini CLI pour créer un CLI.
+
+La commande sera shcc pour Share Claude Code.
+
+L'objectif est de partager les credentials Claude Code entre deux ordinateurs (ex: mon ordinateur personnel et un VM dans le cloud où je ne peux pas faire un /login).
+
+Le langage de programmation à utiliser est Go. 
+Quand on fait "shcc status", la sortie doit renvoyer 
+- la version de shcc, 
+- détecter si Claude Code est installé sur la machine (sinon afficher une URL pour inviter l'utilisateur à consulter la doc pour l'installer), 
+- l'adresse e-mail liée au compte claude code. Comprends-tu mon besoin ?
+- l'OS détecté, 
+- le dossier où se trouve les credentials claude code.
+
+Pour la base de données, ce sera PostgreSQL. Et voici le schéma de la table "shares"
+- id : UUID v4
+- owner : adresse e-mail du proprétaire du tocken
+- to : adresse e-mail du bénéficiaire
+- credentials : JSON contenant les informations de la session (cf ci-dessous)
+- created_at : Datetime, par défaut current time
+- expired_at : Datetime, par défaut expiresAt du JSON de la session
+Pas de doublon to+credentials non expiré.
+
+Schéma de la tables users :
+- id : UUID v4
+- name : nom de l'utilisateur
+- email : adresse e-mail associée à Claude Code
+
+Voici un exemple de credentials claude code :
+{"claudeAiOauth":{"accessToken":"sk-ant-oat01-xxxxx","refreshToken":"sk-ant-ort01-xxxxx","expiresAt":1779994323537,"scopes":["user:file_upload","user:inference","user:mcp_servers","user:profile","user:sessions:claude_code"],"subscriptionType":"pro","rateLimitTier":"default_claude_ai"}}
+
+Commandes :
+- shcc -h : affiche l'aide
+- shcc -v : affiche la version du CLI shcc
+- shcc status : affiche un récap des informations détectées
+- shcc update : met à jour le CLI shcc
+- shcc : verifie s'il y a des credentials en base pour l'utilisateur courant
+- shcc <email> | <nom> : partager ses credentials à une autre personne connaissant son adresse e-mail ou son nom
+- shcc name <nom> : définir un nom pour l'utilisateur courant
+
+Installation du CLI shcc :
+Sur macOS, Linux, WSL : curl -fsSL https://shcc.ongoua.pro/install.sh | bash
+Sur Windows : 
+	PowerShell : irm https://shcc.ongoua.pro/install.ps1 | iex
+	CMD : curl -fsSL https://shcc.ongoua.pro/install.cmd -o install.cmd && install.cmd && del install.cmd
+	
+Procédures :
+Partager des credentials
+1. Installer le CLI shcc
+2. Lancer la commande de partage
+	shcc didier.vincent@gmail.com (ou shcc didier)
+	Détection de l'OS
+	Récupération du JSON où il est stocké
+	Récupération l'adresse e-mail associée à l'utilisateur courant (owner)
+3. Appel de l'API POST /share
+	body (JSON) : owner, to, credentials (encodé en base64 et chiffré)
+4. Afficher la sortie :
+	adresse e-mail invalide
+	utilisateur introuvable
+	une clé est déjà partagée à cet utilisateur
+	
+Recevoir et appliquer des credentials
+1. Installer le CLI shcc
+2. Lancer la commande de récupération des credentials
+	shcc
+	Détecter si Claude Code est installé
+	Récupérer l'adresse e-mail associée
+3. Appel de l'API GET /share?to=didier.vincent@gmail.com (ou /share?to=didier)
+	Afficher un message si aucune clé non expirée existe pour l'utilisateur
+	Sinon
+		Lister les clés trouvées (De : email du owner - expire le 25/03/2026 à 12:45)
+		Choisir une clé et valiser avec Entrée
+		Détection de l'OS
+		Enregistrer le JSON dans le système
+		Afficher un message de succès
+		
+	
