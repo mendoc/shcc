@@ -6,6 +6,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/joho/godotenv"
 	"github.com/mendoc/shcc/internal/api"
 	"github.com/mendoc/shcc/internal/auth"
 	"github.com/mendoc/shcc/internal/config"
@@ -15,13 +16,16 @@ import (
 const version = "1.0.0"
 
 func main() {
-	// 1. Initialisation des clés RSA locales
+	// 1. Chargement du .env PRIORITAIRE
+	_ = godotenv.Load()
+
+	// 2. Initialisation des clés RSA locales
 	if err := auth.EnsureKeys(); err != nil {
 		fmt.Printf("Erreur d'initialisation des clés: %v\n", err)
 		os.Exit(1)
 	}
 
-	// 2. Enregistrement/Mise à jour de l'utilisateur sur le serveur (Silencieux)
+	// 3. Sync user
 	go syncUser()
 
 	if len(os.Args) < 2 {
@@ -39,7 +43,6 @@ func main() {
 		printHelp()
 	case "update":
 		fmt.Println("Vérification des mises à jour...")
-		// Logique d'update à implémenter
 	case "name":
 		if len(os.Args) < 3 {
 			fmt.Println("Erreur: nom manquant. Usage: shcc name <nom>")
@@ -57,7 +60,6 @@ func syncUser() {
 	pubKey, _ := auth.GetPublicKey()
 	shccCfg, _ := config.ReadShccConfig()
 
-	// Le nom envoyé à l'API est soit le nom personnalisé shcc, soit le displayName Claude
 	finalName := dname
 	if shccCfg.Name != "" {
 		finalName = shccCfg.Name
@@ -84,7 +86,6 @@ func handleSetName(name string) {
 		return
 	}
 
-	// Forcer une synchro immédiate
 	email, _ := config.GetUserEmail()
 	pubKey, _ := auth.GetPublicKey()
 	err = api.RegisterUser(api.User{
@@ -132,8 +133,6 @@ func handleShare(recipientIdentifier string) {
 
 	encoded := base64.StdEncoding.EncodeToString(encrypted)
 
-	// Par défaut, expiration dans 24h si non spécifié dans les credentials
-	// En réalité, on devrait parser le JSON pour extraire 'expiresAt'
 	payload := api.Share{
 		Owner:       ownerEmail,
 		To:          destUser.Email,
@@ -194,11 +193,10 @@ func handleReceive() {
 
 	decrypted, err := auth.DecryptHybrid(decoded)
 	if err != nil {
-		fmt.Printf("❌ Échec du déchiffrement : %v (La clé n'était peut-être pas destinée à cette machine)\n", err)
+		fmt.Printf("❌ Échec du déchiffrement : %v\n", err)
 		return
 	}
 
-	// Sauvegarde
 	path := config.GetCredentialsPath()
 	if err := os.MkdirAll(os.ExpandEnv("$HOME/.claude"), 0700); err != nil {
 		fmt.Printf("❌ Erreur création dossier : %v\n", err)
@@ -210,7 +208,7 @@ func handleReceive() {
 		return
 	}
 
-	fmt.Println("✅ Credentials installés avec succès ! Vous pouvez maintenant utiliser Claude Code.")
+	fmt.Println("✅ Credentials installés avec succès !")
 }
 
 func handleStatus() {
@@ -222,12 +220,11 @@ func handleStatus() {
 		fmt.Println("Claude Code: Installé")
 	} else {
 		fmt.Println("Claude Code: Non détecté")
-		fmt.Println("👉 Consultez la documentation pour l'installer: https://docs.anthropic.com/claude/docs/claude-code")
 	}
 
 	email, err := config.GetUserEmail()
 	if err != nil {
-		fmt.Printf("Email:   Non trouvé (%v)\n", err)
+		fmt.Printf("Email:   Non trouvé\n")
 	} else {
 		fmt.Printf("Email:   %s\n", email)
 	}
@@ -247,15 +244,5 @@ func handleStatus() {
 
 func printHelp() {
 	fmt.Println("Utilisation: shcc <commande>")
-	fmt.Println("")
-	fmt.Println("Commandes:")
-	fmt.Println("  status           Affiche un récap des informations détectées")
-	fmt.Println("  <email> | <nom>  Partage vos credentials")
-	fmt.Println("  (sans argument)  Vérifie et installe les credentials reçus")
-	fmt.Println("  name <nom>       Définit un nom pour l'utilisateur courant")
-	fmt.Println("  update           Met à jour le CLI shcc")
-	fmt.Println("")
-	fmt.Println("Options:")
-	fmt.Println("  -v, --version    Affiche la version")
-	fmt.Println("  -h, --help       Affiche l'aide")
+	fmt.Println("Commandes: status, <email|nom>, name <nom>, update")
 }

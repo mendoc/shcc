@@ -13,6 +13,7 @@ var BaseURL = "https://shcc.ongoua.pro"
 
 func init() {
 	if url := os.Getenv("SHCC_API_URL"); url != "" {
+		fmt.Printf("DEBUG: API client init, setting BaseURL to %s\n", url)
 		BaseURL = url
 	}
 }
@@ -92,6 +93,7 @@ func PostShare(payload Share) error {
 // GetShares récupère les partages pour l'utilisateur courant
 func GetShares(email string) ([]Share, error) {
 	url := fmt.Sprintf("%s/share?to=%s", BaseURL, email)
+	fmt.Printf("DEBUG: Appeler %s\n", url)
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
