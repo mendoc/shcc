@@ -1,11 +1,11 @@
-# Utiliser Go 1.22 pour la compilation
-FROM golang:1.22-alpine AS builder
+# Utiliser une version récente de Go
+FROM golang:1.23-alpine AS builder
 
 WORKDIR /app
 
 # Copier les fichiers go.mod et go.sum
-COPY go.mod ./
-# RUN go mod download (Activer si vous avez des dépendances externes)
+COPY go.mod go.sum ./
+RUN go mod download
 
 # Copier tout le monorepo
 COPY . .
@@ -20,7 +20,7 @@ RUN apk --no-cache add ca-certificates
 COPY --from=builder /shcc-api /shcc-api
 
 # Variable d'environnement par défaut
-ENV PORT 8080
+ENV PORT=8080
 
 EXPOSE 8080
 

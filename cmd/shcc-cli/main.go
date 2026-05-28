@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/mendoc/shcc/internal/api"
 	"github.com/mendoc/shcc/internal/auth"
@@ -14,11 +15,14 @@ import (
 const version = "1.0.0"
 
 func main() {
-	// Initialisation des clés si nécessaire
+	// 1. Initialisation des clés RSA locales
 	if err := auth.EnsureKeys(); err != nil {
 		fmt.Printf("Erreur d'initialisation des clés: %v\n", err)
 		os.Exit(1)
 	}
+
+	// 2. Enregistrement/Mise à jour de l'utilisateur sur le serveur (Silencieux)
+	go syncUser()
 
 	if len(os.Args) < 2 {
 		handleReceive()
@@ -35,73 +39,175 @@ func main() {
 		printHelp()
 	case "update":
 		fmt.Println("Vérification des mises à jour...")
-		// Logique d'update
+		// Logique d'update à implémenter
 	case "name":
 		if len(os.Args) < 3 {
 			fmt.Println("Erreur: nom manquant. Usage: shcc name <nom>")
 			return
 		}
-		fmt.Printf("Nom défini : %s (Simulé)\n", os.Args[2])
+		handleSetName(os.Args[2])
 	default:
-		// Si l'argument ressemble à un email ou un nom, on partage
 		handleShare(cmd)
 	}
 }
 
-func handleShare(recipient string) {
-	fmt.Printf("Préparation du partage pour : %s\n", recipient)
+func syncUser() {
+	email, _ := config.GetUserEmail()
+	dname, _ := config.GetUserDisplayName()
+	pubKey, _ := auth.GetPublicKey()
+	shccCfg, _ := config.ReadShccConfig()
 
-	// 1. Récupérer l'email de l'owner
-	owner, err := config.GetUserEmail()
+	if email != "" && pubKey != "" {
+		_ = api.RegisterUser(api.User{
+			Email:       email,
+			DisplayName: dname,
+			Name:        shccCfg.Name,
+			PublicKey:   pubKey,
+		})
+	}
+}
+
+func handleSetName(name string) {
+	cfg, err := config.ReadShccConfig()
 	if err != nil {
-		fmt.Printf("Erreur: impossible de récupérer votre email (%v)\n", err)
+		fmt.Printf("Erreur lors de la lecture de la config: %v\n", err)
+		return
+	}
+	cfg.Name = name
+	if err := config.SaveShccConfig(cfg); err != nil {
+		fmt.Printf("Erreur lors de la sauvegarde de la config: %v\n", err)
 		return
 	}
 
-	// 2. Récupérer les credentials
+	// Forcer une synchro immédiate
+	email, _ := config.GetUserEmail()
+	dname, _ := config.GetUserDisplayName()
+	pubKey, _ := auth.GetPublicKey()
+	err = api.RegisterUser(api.User{
+		Email:       email,
+		DisplayName: dname,
+		Name:        name,
+		PublicKey:   pubKey,
+	})
+
+	if err != nil {
+		fmt.Printf("Nom enregistré localement mais erreur de synchro API: %v\n", err)
+	} else {
+		fmt.Printf("✅ Nom '%s' enregistré et synchronisé avec succès.\n", name)
+	}
+}
+
+func handleShare(recipientIdentifier string) {
+	fmt.Printf("🔍 Recherche de l'utilisateur '%s'...\n", recipientIdentifier)
+	
+	destUser, err := api.GetUser(recipientIdentifier)
+	if err != nil {
+		fmt.Printf("❌ %v\n", err)
+		return
+	}
+
+	fmt.Printf("📧 Utilisateur trouvé : %s (%s)\n", destUser.DisplayName, destUser.Email)
+
+	ownerEmail, err := config.GetUserEmail()
+	if err != nil {
+		fmt.Printf("❌ Erreur: impossible de récupérer votre email (%v)\n", err)
+		return
+	}
+
 	creds, err := config.GetCredentials()
 	if err != nil {
-		fmt.Printf("Erreur: impossible de lire les credentials Claude Code (%v)\n", err)
+		fmt.Printf("❌ Erreur: impossible de lire les credentials Claude Code (%v)\n", err)
 		return
 	}
 
-	// 3. Récupérer la clé publique du destinataire (MOCK)
-	// Pour le test, on utilise notre propre clé publique pour simuler un "auto-partage"
-	pubKey, err := auth.GetPublicKey()
+	fmt.Println("🔐 Chiffrement des credentials...")
+	encrypted, err := auth.EncryptHybrid(destUser.PublicKey, []byte(creds))
 	if err != nil {
-		fmt.Printf("Erreur: impossible d'obtenir la clé publique (%v)\n", err)
+		fmt.Printf("❌ Erreur de chiffrement : %v\n", err)
 		return
 	}
 
-	// 4. Chiffrer (Hybride AES + RSA)
-	encrypted, err := auth.EncryptHybrid(pubKey, []byte(creds))
-	if err != nil {
-		fmt.Printf("Erreur de chiffrement : %v\n", err)
-		return
-	}
-
-	// 5. Encoder en Base64
 	encoded := base64.StdEncoding.EncodeToString(encrypted)
 
-	// 6. Envoyer (MOCK)
-	payload := api.SharePayload{
-		Owner:       owner,
-		To:          recipient,
+	// Par défaut, expiration dans 24h si non spécifié dans les credentials
+	// En réalité, on devrait parser le JSON pour extraire 'expiresAt'
+	payload := api.Share{
+		Owner:       ownerEmail,
+		To:          destUser.Email,
 		Credentials: encoded,
+		ExpiredAt:   time.Now().Add(24 * time.Hour),
 	}
 
-	if err := api.MockPostShare(payload); err != nil {
-		fmt.Printf("Erreur lors de l'envoi : %v\n", err)
+	fmt.Println("🚀 Envoi au serveur...")
+	if err := api.PostShare(payload); err != nil {
+		fmt.Printf("❌ Erreur lors du partage : %v\n", err)
 		return
 	}
 
-	fmt.Println("✅ Credentials partagés avec succès !")
+	fmt.Printf("✅ Credentials partagés avec succès à %s !\n", destUser.Email)
 }
 
 func handleReceive() {
-	fmt.Println("Recherche de credentials partagés pour vous...")
-	// Logique interactive simulée
-	fmt.Println("Aucune clé partagée trouvée en base de données (Simulé).")
+	email, err := config.GetUserEmail()
+	if err != nil {
+		fmt.Printf("❌ Erreur: impossible d'identifier votre compte (%v)\n", err)
+		return
+	}
+
+	fmt.Println("📥 Recherche de credentials partagés pour vous...")
+	shares, err := api.GetShares(email)
+	if err != nil {
+		fmt.Printf("❌ Erreur API : %v\n", err)
+		return
+	}
+
+	if len(shares) == 0 {
+		fmt.Println("📭 Aucune clé partagée trouvée.")
+		return
+	}
+
+	fmt.Printf("✨ %d clé(s) trouvée(s) :\n", len(shares))
+	for i, s := range shares {
+		fmt.Printf("[%d] De : %s (Expire le %s)\n", i+1, s.Owner, s.ExpiredAt.Format("02/01/2006 à 15:04"))
+	}
+
+	var choice int
+	fmt.Print("\nChoisissez une clé à appliquer (numéro) ou 0 pour annuler : ")
+	fmt.Scanln(&choice)
+
+	if choice < 1 || choice > len(shares) {
+		fmt.Println("Annulé.")
+		return
+	}
+
+	selected := shares[choice-1]
+	fmt.Println("🔓 Déchiffrement et installation...")
+
+	decoded, err := base64.StdEncoding.DecodeString(selected.Credentials)
+	if err != nil {
+		fmt.Printf("❌ Erreur de décodage : %v\n", err)
+		return
+	}
+
+	decrypted, err := auth.DecryptHybrid(decoded)
+	if err != nil {
+		fmt.Printf("❌ Échec du déchiffrement : %v (La clé n'était peut-être pas destinée à cette machine)\n", err)
+		return
+	}
+
+	// Sauvegarde
+	path := config.GetCredentialsPath()
+	if err := os.MkdirAll(os.ExpandEnv("$HOME/.claude"), 0700); err != nil {
+		fmt.Printf("❌ Erreur création dossier : %v\n", err)
+		return
+	}
+
+	if err := os.WriteFile(path, decrypted, 0600); err != nil {
+		fmt.Printf("❌ Erreur d'écriture : %v\n", err)
+		return
+	}
+
+	fmt.Println("✅ Credentials installés avec succès ! Vous pouvez maintenant utiliser Claude Code.")
 }
 
 func handleStatus() {
@@ -123,6 +229,16 @@ func handleStatus() {
 		fmt.Printf("Email:   %s\n", email)
 	}
 
+	dname, _ := config.GetUserDisplayName()
+	if dname != "" {
+		fmt.Printf("Display: %s\n", dname)
+	}
+
+	shccCfg, _ := config.ReadShccConfig()
+	if shccCfg.Name != "" {
+		fmt.Printf("Nom shcc:%s\n", shccCfg.Name)
+	}
+
 	fmt.Printf("Credentials Path: %s\n", config.GetCredentialsPath())
 }
 
@@ -132,8 +248,9 @@ func printHelp() {
 	fmt.Println("Commandes:")
 	fmt.Println("  status           Affiche un récap des informations détectées")
 	fmt.Println("  <email> | <nom>  Partage vos credentials")
-	fmt.Println("  update           Met à jour le CLI shcc")
+	fmt.Println("  (sans argument)  Vérifie et installe les credentials reçus")
 	fmt.Println("  name <nom>       Définit un nom pour l'utilisateur courant")
+	fmt.Println("  update           Met à jour le CLI shcc")
 	fmt.Println("")
 	fmt.Println("Options:")
 	fmt.Println("  -v, --version    Affiche la version")
