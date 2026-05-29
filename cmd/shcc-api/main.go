@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"text/template"
 	"time"
 
 	"github.com/google/uuid"
@@ -30,10 +31,30 @@ func main() {
 	http.HandleFunc("/status", handleStatus)
 	http.HandleFunc("/share", handleShare)
 	http.HandleFunc("/user", handleUser)
+	http.HandleFunc("/install.sh", handleInstallScript)
+	http.Handle("/bin/", http.StripPrefix("/bin/", http.FileServer(http.Dir("./bin"))))
 
 	log.Printf("shcc-api à l'écoute sur le port %s", port)
 	if err := http.ListenAndServe(":"+port, nil); err != nil {
 		log.Fatal(err)
+	}
+}
+
+func handleInstallScript(w http.ResponseWriter, r *http.Request) {
+	tmpl, err := template.ParseFiles("cmd/shcc-api/install.sh.tmpl")
+	if err != nil {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		log.Printf("Erreur template: %v", err)
+		return
+	}
+
+	data := map[string]string{
+		"Host": r.Host,
+	}
+
+	w.Header().Set("Content-Type", "text/x-shellscript")
+	if err := tmpl.Execute(w, data); err != nil {
+		log.Printf("Erreur execution template: %v", err)
 	}
 }
 
@@ -56,7 +77,6 @@ func handleShare(w http.ResponseWriter, r *http.Request) {
 
 		s.ID = uuid.New()
 		s.CreatedAt = time.Now()
-		// expired_at devrait être passé dans le JSON ou calculé
 
 		_, err := database.Pool.Exec(ctx, 
 			"INSERT INTO shares (id, owner, \"to\", credentials, created_at, expired_at) VALUES ($1, $2, $3, $4, $5, $6)",
@@ -114,7 +134,6 @@ func handleUser(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Upsert sur email
 		_, err := database.Pool.Exec(ctx, 
 			`INSERT INTO users (id, name, email, public_key) 
 			 VALUES ($1, $2, $3, $4)
