@@ -9,7 +9,7 @@ import (
 )
 
 // BaseURL est l'URL de l'API shcc. Peut être surchargée par SHCC_API_URL
-var BaseURL = "https://shcc.ongoua.pro"
+var BaseURL = "http://localhost:8080"
 
 func init() {
 	if url := os.Getenv("SHCC_API_URL"); url != "" {

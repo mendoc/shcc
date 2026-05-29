@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"os"
 	"time"
@@ -124,6 +125,16 @@ func handleShare(recipientIdentifier string) {
 		return
 	}
 
+	// Calcul dynamique de l'expiration
+	var credsParsed config.ClaudeCreds
+	var expiry time.Time
+	if err := json.Unmarshal([]byte(creds), &credsParsed); err == nil && credsParsed.ClaudeAiOauth.ExpiresAt > 0 {
+		expiry = time.UnixMilli(credsParsed.ClaudeAiOauth.ExpiresAt)
+	} else {
+		// Fallback à 24h
+		expiry = time.Now().Add(24 * time.Hour)
+	}
+
 	fmt.Println("🔐 Chiffrement des credentials...")
 	encrypted, err := auth.EncryptHybrid(destUser.PublicKey, []byte(creds))
 	if err != nil {
@@ -137,7 +148,7 @@ func handleShare(recipientIdentifier string) {
 		Owner:       ownerEmail,
 		To:          destUser.Email,
 		Credentials: encoded,
-		ExpiredAt:   time.Now().Add(24 * time.Hour),
+		ExpiredAt:   expiry,
 	}
 
 	fmt.Println("🚀 Envoi au serveur...")

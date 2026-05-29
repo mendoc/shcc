@@ -53,6 +53,13 @@ func ReadClaudeConfig() (*ClaudeConfig, error) {
 	return &config, nil
 }
 
+// ClaudeCreds définit la structure du JSON de credentials Claude Code
+type ClaudeCreds struct {
+	ClaudeAiOauth struct {
+		ExpiresAt int64 `json:"expiresAt"`
+	} `json:"claudeAiOauth"`
+}
+
 // GetCredentials lit le contenu du fichier de credentials
 func GetCredentials() (string, error) {
 	path := GetCredentialsPath()
