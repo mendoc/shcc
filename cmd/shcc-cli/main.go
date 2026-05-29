@@ -22,9 +22,7 @@ func main() {
 	ex, _ := os.Executable()
 	exPath := filepath.Dir(ex)
 	envPath := filepath.Join(exPath, ".env")
-	if err := godotenv.Load(envPath); err == nil {
-		fmt.Printf("✅ Fichier .env chargé depuis %s\n", envPath)
-	}
+	_ = godotenv.Load(envPath)
 
 	// 2. Initialisation des clés RSA locales
 	if err := auth.EnsureKeys(); err != nil {
@@ -64,7 +62,7 @@ func main() {
 }
 
 func handleUninstall() {
-	fmt.Print("⚠️ Cette opération supprimera votre configuration locale (~/.shcc/). Continuer ? (y/N) : ")
+	fmt.Print("Cette opération supprimera votre configuration locale (~/.shcc/). Continuer ? (y/N) : ")
 	var confirm string
 	fmt.Scanln(&confirm)
 	if confirm != "y" && confirm != "Y" {
@@ -74,12 +72,12 @@ func handleUninstall() {
 
 	dir := config.GetShccConfigDir()
 	if err := os.RemoveAll(dir); err != nil {
-		fmt.Printf("❌ Erreur lors de la suppression de %s: %v\n", dir, err)
+		fmt.Printf("Erreur lors de la suppression de %s: %v\n", dir, err)
 	} else {
-		fmt.Printf("✅ Configuration locale supprimée : %s\n", dir)
+		fmt.Printf("Configuration locale supprimée : %s\n", dir)
 	}
 
-	fmt.Println("ℹ️ Pour supprimer le binaire, exécutez : sudo rm /usr/local/bin/shcc")
+	fmt.Println("Pour supprimer le binaire, exécutez : sudo rm /usr/local/bin/shcc")
 }
 
 func syncUser() {
@@ -125,30 +123,30 @@ func handleSetName(name string) {
 	if err != nil {
 		fmt.Printf("Nom enregistré localement mais erreur de synchro API: %v\n", err)
 	} else {
-		fmt.Printf("✅ Nom '%s' enregistré et synchronisé avec succès.\n", name)
+		fmt.Printf("Nom '%s' enregistré et synchronisé avec succès.\n", name)
 	}
 }
 
 func handleShare(recipientIdentifier string) {
-	fmt.Printf("🔍 Recherche de l'utilisateur '%s'...\n", recipientIdentifier)
+	fmt.Printf("Recherche de l'utilisateur '%s'...\n", recipientIdentifier)
 	
 	destUser, err := api.GetUser(recipientIdentifier)
 	if err != nil {
-		fmt.Printf("❌ %v\n", err)
+		fmt.Printf("%v\n", err)
 		return
 	}
 
-	fmt.Printf("📧 Utilisateur trouvé : %s (%s)\n", destUser.Name, destUser.Email)
+	fmt.Printf("Utilisateur trouvé : %s (%s)\n", destUser.Name, destUser.Email)
 
 	ownerEmail, err := config.GetUserEmail()
 	if err != nil {
-		fmt.Printf("❌ Erreur: impossible de récupérer votre email (%v)\n", err)
+		fmt.Printf("Erreur: impossible de récupérer votre email (%v)\n", err)
 		return
 	}
 
 	creds, err := config.GetCredentials()
 	if err != nil {
-		fmt.Printf("❌ Erreur: impossible de lire les credentials Claude Code (%v)\n", err)
+		fmt.Printf("Erreur: impossible de lire les credentials Claude Code (%v)\n", err)
 		return
 	}
 
@@ -162,10 +160,10 @@ func handleShare(recipientIdentifier string) {
 		expiry = time.Now().Add(24 * time.Hour)
 	}
 
-	fmt.Println("🔐 Chiffrement des credentials...")
+	fmt.Println("Chiffrement des credentials...")
 	encrypted, err := auth.EncryptHybrid(destUser.PublicKey, []byte(creds))
 	if err != nil {
-		fmt.Printf("❌ Erreur de chiffrement : %v\n", err)
+		fmt.Printf("Erreur de chiffrement : %v\n", err)
 		return
 	}
 
@@ -178,35 +176,35 @@ func handleShare(recipientIdentifier string) {
 		ExpiredAt:   expiry,
 	}
 
-	fmt.Println("🚀 Envoi au serveur...")
+	fmt.Println("Envoi au serveur...")
 	if err := api.PostShare(payload); err != nil {
-		fmt.Printf("❌ Erreur lors du partage : %v\n", err)
+		fmt.Printf("Erreur lors du partage : %v\n", err)
 		return
 	}
 
-	fmt.Printf("✅ Credentials partagés avec succès à %s !\n", destUser.Email)
+	fmt.Printf("Credentials partagés avec succès à %s !\n", destUser.Email)
 }
 
 func handleReceive() {
 	email, err := config.GetUserEmail()
 	if err != nil {
-		fmt.Printf("❌ Erreur: impossible d'identifier votre compte (%v)\n", err)
+		fmt.Printf("Erreur: impossible d'identifier votre compte (%v)\n", err)
 		return
 	}
 
-	fmt.Println("📥 Recherche de credentials partagés pour vous...")
+	fmt.Println("Recherche de credentials partagés pour vous...")
 	shares, err := api.GetShares(email)
 	if err != nil {
-		fmt.Printf("❌ Erreur API : %v\n", err)
+		fmt.Printf("Erreur API : %v\n", err)
 		return
 	}
 
 	if len(shares) == 0 {
-		fmt.Println("📭 Aucune clé partagée trouvée.")
+		fmt.Println("Aucune clé partagée trouvée.")
 		return
 	}
 
-	fmt.Printf("✨ %d clé(s) trouvée(s) :\n", len(shares))
+	fmt.Printf("%d clé(s) trouvée(s) :\n", len(shares))
 	for i, s := range shares {
 		fmt.Printf("[%d] De : %s (Expire le %s)\n", i+1, s.Owner, s.ExpiredAt.Format("02/01/2006 à 15:04"))
 	}
@@ -221,32 +219,32 @@ func handleReceive() {
 	}
 
 	selected := shares[choice-1]
-	fmt.Println("🔓 Déchiffrement et installation...")
+	fmt.Println("Déchiffrement et installation...")
 
 	decoded, err := base64.StdEncoding.DecodeString(selected.Credentials)
 	if err != nil {
-		fmt.Printf("❌ Erreur de décodage : %v\n", err)
+		fmt.Printf("Erreur de décodage : %v\n", err)
 		return
 	}
 
 	decrypted, err := auth.DecryptHybrid(decoded)
 	if err != nil {
-		fmt.Printf("❌ Échec du déchiffrement : %v\n", err)
+		fmt.Printf("Échec du déchiffrement : %v\n", err)
 		return
 	}
 
 	path := config.GetCredentialsPath()
 	if err := os.MkdirAll(os.ExpandEnv("$HOME/.claude"), 0700); err != nil {
-		fmt.Printf("❌ Erreur création dossier : %v\n", err)
+		fmt.Printf("Erreur création dossier : %v\n", err)
 		return
 	}
 
 	if err := os.WriteFile(path, decrypted, 0600); err != nil {
-		fmt.Printf("❌ Erreur d'écriture : %v\n", err)
+		fmt.Printf("Erreur d'écriture : %v\n", err)
 		return
 	}
 
-	fmt.Println("✅ Credentials installés avec succès !")
+	fmt.Println("Credentials installés avec succès !")
 }
 
 func handleStatus() {
@@ -282,5 +280,5 @@ func handleStatus() {
 
 func printHelp() {
 	fmt.Println("Utilisation: shcc <commande>")
-	fmt.Println("Commandes: status, <email|nom>, name <nom>, update")
+	fmt.Println("Commandes: status, <email|nom>, name <nom>, update, uninstall")
 }

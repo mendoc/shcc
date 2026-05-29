@@ -71,7 +71,8 @@ func GetUser(identifier string) (*User, error) {
 
 	var user User
 	if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
-		return nil, fmt.Errorf("réponse serveur invalide (format JSON attendu): %w", err)
+		system.Debug("%s", err)
+		return nil, fmt.Errorf("réponse serveur invalide (format JSON attendu)")
 	}
 
 	return &user, nil
@@ -119,7 +120,8 @@ func GetShares(email string) ([]Share, error) {
 
 	var shares []Share
 	if err := json.NewDecoder(resp.Body).Decode(&shares); err != nil {
-		return nil, fmt.Errorf("réponse serveur invalide (format JSON attendu): %w", err)
+		system.Debug("%s", err)
+		return nil, fmt.Errorf("réponse serveur invalide (format JSON attendu)")
 	}
 
 	return shares, nil
