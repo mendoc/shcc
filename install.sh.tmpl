@@ -1,12 +1,21 @@
 #!/bin/bash
 set -e
-echo "Installation de shcc depuis http://{{.Host}}..."
-BIN_URL="http://{{.Host}}/bin/shcc-linux"
+
+# Installation de shcc depuis les GitHub Releases
+REPO="mendoc/shcc"
 INSTALL_DIR="/usr/local/bin"
 
-# Note: Dans un environnement réel, le binaire doit être accessible via cet endpoint ou un bucket S3
-curl -fsSL "$BIN_URL" -o /tmp/shcc
-chmod +x /tmp/shcc
+echo "Recherche de la dernière version de shcc..."
+LATEST_URL=$(curl -s https://api.github.com/repos/$REPO/releases/latest | grep "browser_download_url.*shcc-linux" | cut -d : -f 2,3 | tr -d \")
+
+if [ -z "$LATEST_URL" ]; then
+    echo "❌ Impossible de trouver une release pour shcc-linux."
+    exit 1
+fi
+
+echo "Téléchargement depuis $LATEST_URL..."
+sudo curl -fsSL "$LATEST_URL" -o /tmp/shcc
+sudo chmod +x /tmp/shcc
 sudo mkdir -p "$INSTALL_DIR"
 sudo mv /tmp/shcc "$INSTALL_DIR/shcc"
 
