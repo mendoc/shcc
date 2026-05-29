@@ -50,9 +50,30 @@ func main() {
 			return
 		}
 		handleSetName(os.Args[2])
+	case "uninstall":
+		handleUninstall()
 	default:
 		handleShare(cmd)
 	}
+}
+
+func handleUninstall() {
+	fmt.Print("⚠️ Cette opération supprimera votre configuration locale (~/.shcc/). Continuer ? (y/N) : ")
+	var confirm string
+	fmt.Scanln(&confirm)
+	if confirm != "y" && confirm != "Y" {
+		fmt.Println("Opération annulée.")
+		return
+	}
+
+	dir := config.GetShccConfigDir()
+	if err := os.RemoveAll(dir); err != nil {
+		fmt.Printf("❌ Erreur lors de la suppression de %s: %v\n", dir, err)
+	} else {
+		fmt.Printf("✅ Configuration locale supprimée : %s\n", dir)
+	}
+
+	fmt.Println("ℹ️ Pour supprimer le binaire, exécutez : sudo rm /usr/local/bin/shcc")
 }
 
 func syncUser() {
