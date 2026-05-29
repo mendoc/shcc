@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -17,8 +18,13 @@ import (
 const version = "1.0.0"
 
 func main() {
-	// 1. Chargement du .env PRIORITAIRE
-	_ = godotenv.Load()
+	// 1. Chargement du .env PRIORITAIRE depuis le répertoire de l'exécutable
+	ex, _ := os.Executable()
+	exPath := filepath.Dir(ex)
+	envPath := filepath.Join(exPath, ".env")
+	if err := godotenv.Load(envPath); err == nil {
+		fmt.Printf("✅ Fichier .env chargé depuis %s\n", envPath)
+	}
 
 	// 2. Initialisation des clés RSA locales
 	if err := auth.EnsureKeys(); err != nil {

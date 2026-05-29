@@ -10,17 +10,12 @@ import (
 	"github.com/mendoc/shcc/internal/system"
 )
 
-// BaseURL est l'URL de l'API shcc. Doit être définie via SHCC_API_URL
-var BaseURL string
+// BaseURL est l'URL de l'API shcc. 
+var BaseURL = "https://shcc.ongoua.pro"
 
 func init() {
-	url := os.Getenv("SHCC_API_URL")
-	if url == "" {
-		// Pas de panic ici car init() est appelé très tôt, 
-		// on laisse le CLI ou le serveur échouer lors de l'usage.
-		system.Debug("SHCC_API_URL non définie")
-	} else {
-		system.Debug("API client init, setting BaseURL to %s", url)
+	if url := os.Getenv("SHCC_API_URL"); url != "" {
+		system.Debug("API client init, override BaseURL to %s", url)
 		BaseURL = url
 	}
 }
