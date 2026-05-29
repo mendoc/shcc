@@ -6,7 +6,8 @@ REPO="mendoc/shcc"
 INSTALL_DIR="/usr/local/bin"
 
 echo "Recherche de la dernière version de shcc..."
-LATEST_URL=$(curl -s https://api.github.com/repos/$REPO/releases/latest | grep "browser_download_url.*shcc-linux" | cut -d : -f 2,3 | tr -d \")
+# Nettoyage amélioré pour supprimer les espaces et guillemets
+LATEST_URL=$(curl -s https://api.github.com/repos/$REPO/releases/latest | grep "browser_download_url.*shcc-linux" | cut -d : -f 2,3 | tr -d ' "' | tr -d ' ')
 
 if [ -z "$LATEST_URL" ]; then
     echo "❌ Impossible de trouver une release pour shcc-linux."
@@ -14,7 +15,8 @@ if [ -z "$LATEST_URL" ]; then
 fi
 
 echo "Téléchargement depuis $LATEST_URL..."
-sudo curl -fsSL "$LATEST_URL" -o /tmp/shcc
+# Utilisation de -L pour suivre les redirections GitHub
+sudo curl -fsSL -L "$LATEST_URL" -o /tmp/shcc
 sudo chmod +x /tmp/shcc
 sudo mkdir -p "$INSTALL_DIR"
 sudo mv /tmp/shcc "$INSTALL_DIR/shcc"
