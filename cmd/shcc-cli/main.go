@@ -245,33 +245,33 @@ func handleReceive() {
 
 func handleStatus() {
 	fmt.Println("--- shcc Status ---")
-	fmt.Printf("Version: %s\n", version)
-	fmt.Printf("OS:      %s\n", system.GetOS())
+	fmt.Printf("Version          : %s\n", version)
+	fmt.Printf("OS               : %s\n", system.GetOS())
 
 	if system.IsClaudeInstalled() {
-		fmt.Println("Claude Code: Installé")
+		fmt.Println("Claude Code      : Installé")
 	} else {
-		fmt.Println("Claude Code: Non détecté")
+		fmt.Println("Claude Code      : Non détecté")
 	}
 
 	email, err := config.GetUserEmail()
 	if err != nil {
-		fmt.Printf("Email:   Non trouvé\n")
+		fmt.Printf("Email            : Non trouvé\n")
 	} else {
-		fmt.Printf("Email:   %s\n", email)
+		fmt.Printf("Email            : %s\n", email)
 	}
 
 	dname, _ := config.GetUserDisplayName()
 	if dname != "" {
-		fmt.Printf("Display: %s\n", dname)
+		fmt.Printf("Nom              : %s\n", dname)
 	}
 
 	shccCfg, _ := config.ReadShccConfig()
 	if shccCfg.Name != "" {
-		fmt.Printf("Nom shcc:%s\n", shccCfg.Name)
+		fmt.Printf("Nom shcc     :%s\n", shccCfg.Name)
 	}
 
-	fmt.Printf("Credentials Path: %s\n", config.GetCredentialsPath())
+	fmt.Printf("Credentials Path : %s\n", config.GetCredentialsPath())
 }
 
 func printHelp() {
