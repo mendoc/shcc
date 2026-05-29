@@ -33,6 +33,9 @@ func RegisterUser(user User) error {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode == http.StatusNotFound {
+		return fmt.Errorf("erreur API: le serveur est introuvable (404)")
+	}
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
 		return fmt.Errorf("erreur serveur (code %d) lors de l'enregistrement", resp.StatusCode)
 	}
@@ -59,8 +62,11 @@ func GetUser(identifier string) (*User, error) {
 		defer resp.Body.Close()
 	}
 
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, fmt.Errorf("utilisateur '%s' introuvable", identifier)
+	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("utilisateur '%s' introuvable (code %d)", identifier, resp.StatusCode)
+		return nil, fmt.Errorf("erreur API (code %d)", resp.StatusCode)
 	}
 
 	var user User
@@ -84,6 +90,9 @@ func PostShare(payload Share) error {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode == http.StatusNotFound {
+		return fmt.Errorf("erreur API: le serveur est introuvable (404)")
+	}
 	if resp.StatusCode != http.StatusCreated {
 		return fmt.Errorf("erreur API lors du partage (code %d)", resp.StatusCode)
 	}
@@ -101,6 +110,9 @@ func GetShares(email string) ([]Share, error) {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, fmt.Errorf("erreur API: le serveur est introuvable (404)")
+	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("erreur serveur lors de la récupération (code %d)", resp.StatusCode)
 	}
