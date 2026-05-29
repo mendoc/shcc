@@ -275,7 +275,9 @@ func handleStatus() {
 		fmt.Printf("Nom shcc     :%s\n", shccCfg.Name)
 	}
 
-	fmt.Printf("Credentials Path : %s\n", config.GetCredentialsPath())
+	if os.Getenv("DEBUG") == "true" {
+		fmt.Printf("Credentials Path : %s\n", config.GetCredentialsPath())
+	}
 }
 
 func printHelp() {
