@@ -48,7 +48,7 @@ func main() {
 	case "-h", "--help":
 		printHelp()
 	case "update":
-		fmt.Println("Vérification des mises à jour...")
+		handleUpdate()
 	case "name":
 		if len(os.Args) < 3 {
 			fmt.Println("Erreur: nom manquant. Usage: shcc name <nom>")
@@ -130,7 +130,7 @@ func handleSetName(name string) {
 
 func handleShare(recipientIdentifier string) {
 	fmt.Printf("Recherche de l'utilisateur '%s'...\n", recipientIdentifier)
-	
+
 	_, err := mail.ParseAddress(recipientIdentifier)
 	isEmail := (err == nil)
 
@@ -207,7 +207,7 @@ func handleReceive() {
 		return
 	}
 
-	fmt.Printf("%d clé(s) trouvée(s) :\n", len(shares))
+	fmt.Printf("%d clé(s) trouvée(s) :\n\n", len(shares))
 	for i, s := range shares {
 		fmt.Printf("[%d] De : %s (Expire le %s)\n", i+1, s.Owner, s.ExpiredAt.Format("02/01/2006 à 15:04"))
 	}
