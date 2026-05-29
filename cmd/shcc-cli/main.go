@@ -16,7 +16,7 @@ import (
 	"github.com/mendoc/shcc/internal/system"
 )
 
-const version = "1.2.0"
+const version = "1.2.1"
 
 func main() {
 	// 1. Chargement du .env PRIORITAIRE depuis le répertoire de l'exécutable
@@ -32,7 +32,7 @@ func main() {
 	}
 
 	// 3. Sync user
-	go syncUser()
+	syncUser()
 
 	if len(os.Args) < 2 {
 		handleReceive()
