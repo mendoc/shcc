@@ -10,7 +10,7 @@ import (
 	"github.com/mendoc/shcc/internal/system"
 )
 
-// BaseURL est l'URL de l'API shcc. 
+// BaseURL est l'URL de l'API shcc. Doit être définie via SHCC_API_URL
 var BaseURL = "https://shcc.ongoua.pro"
 
 func init() {
@@ -29,12 +29,12 @@ func RegisterUser(user User) error {
 
 	resp, err := http.Post(BaseURL+"/user", "application/json", bytes.NewBuffer(data))
 	if err != nil {
-		return fmt.Errorf("erreur de connexion à l'API: %w", err)
+		return fmt.Errorf("impossible de joindre le serveur API (%s): %w", BaseURL, err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
-		return fmt.Errorf("erreur API (%d)", resp.StatusCode)
+		return fmt.Errorf("erreur serveur (code %d) lors de l'enregistrement", resp.StatusCode)
 	}
 
 	return nil
@@ -45,11 +45,12 @@ func GetUser(identifier string) (*User, error) {
 	url := fmt.Sprintf("%s/user?email=%s", BaseURL, identifier)
 	resp, err := http.Get(url)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("erreur de connexion API: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusNotFound {
+		// Tentative par nom
 		url = fmt.Sprintf("%s/user?name=%s", BaseURL, identifier)
 		resp, err = http.Get(url)
 		if err != nil {
@@ -59,12 +60,12 @@ func GetUser(identifier string) (*User, error) {
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("utilisateur '%s' introuvable", identifier)
+		return nil, fmt.Errorf("utilisateur '%s' introuvable (code %d)", identifier, resp.StatusCode)
 	}
 
 	var user User
 	if err := json.NewDecoder(resp.Body).Decode(&user); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("réponse serveur invalide (format JSON attendu): %w", err)
 	}
 
 	return &user, nil
@@ -84,7 +85,7 @@ func PostShare(payload Share) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusCreated {
-		return fmt.Errorf("erreur API lors du partage (%d)", resp.StatusCode)
+		return fmt.Errorf("erreur API lors du partage (code %d)", resp.StatusCode)
 	}
 
 	return nil
@@ -96,17 +97,17 @@ func GetShares(email string) ([]Share, error) {
 	system.Debug("Appeler %s", url)
 	resp, err := http.Get(url)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("erreur de connexion API: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("erreur API lors de la récupération (%d)", resp.StatusCode)
+		return nil, fmt.Errorf("erreur serveur lors de la récupération (code %d)", resp.StatusCode)
 	}
 
 	var shares []Share
 	if err := json.NewDecoder(resp.Body).Decode(&shares); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("réponse serveur invalide (format JSON attendu): %w", err)
 	}
 
 	return shares, nil
