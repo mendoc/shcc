@@ -4,6 +4,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net/mail"
 	"os"
 	"path/filepath"
 	"time"
@@ -130,7 +131,10 @@ func handleSetName(name string) {
 func handleShare(recipientIdentifier string) {
 	fmt.Printf("Recherche de l'utilisateur '%s'...\n", recipientIdentifier)
 	
-	destUser, err := api.GetUser(recipientIdentifier)
+	_, err := mail.ParseAddress(recipientIdentifier)
+	isEmail := (err == nil)
+
+	destUser, err := api.GetUser(recipientIdentifier, isEmail)
 	if err != nil {
 		fmt.Printf("%v\n", err)
 		return
@@ -156,7 +160,6 @@ func handleShare(recipientIdentifier string) {
 	if err := json.Unmarshal([]byte(creds), &credsParsed); err == nil && credsParsed.ClaudeAiOauth.ExpiresAt > 0 {
 		expiry = time.UnixMilli(credsParsed.ClaudeAiOauth.ExpiresAt)
 	} else {
-		// Fallback à 24h
 		expiry = time.Now().Add(24 * time.Hour)
 	}
 

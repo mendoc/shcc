@@ -42,25 +42,19 @@ func RegisterUser(user User) error {
 
 	return nil
 }
-
 // GetUser récupère les infos d'un utilisateur par email ou nom
-func GetUser(identifier string) (*User, error) {
-	url := fmt.Sprintf("%s/user?email=%s", BaseURL, identifier)
+func GetUser(identifier string, isEmail bool) (*User, error) {
+	param := "name"
+	if isEmail {
+		param = "email"
+	}
+
+	url := fmt.Sprintf("%s/user?%s=%s", BaseURL, param, identifier)
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("erreur de connexion API: %w", err)
 	}
 	defer resp.Body.Close()
-
-	if resp.StatusCode == http.StatusNotFound {
-		// Tentative par nom
-		url = fmt.Sprintf("%s/user?name=%s", BaseURL, identifier)
-		resp, err = http.Get(url)
-		if err != nil {
-			return nil, err
-		}
-		defer resp.Body.Close()
-	}
 
 	if resp.StatusCode == http.StatusNotFound {
 		return nil, fmt.Errorf("utilisateur '%s' introuvable", identifier)
