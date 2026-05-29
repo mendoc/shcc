@@ -41,7 +41,7 @@ func main() {
 }
 
 func handleInstallScript(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := template.ParseFiles("cmd/shcc-api/install.sh.tmpl")
+	tmpl, err := template.ParseFiles("install.sh.tmpl")
 	if err != nil {
 		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
 		log.Printf("Erreur template: %v", err)

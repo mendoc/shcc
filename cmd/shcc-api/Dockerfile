@@ -7,8 +7,11 @@ WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
 
-# Copier tout le monorepo
-COPY . .
+# Copier uniquement les dossiers nécessaires à l'API (excluant cmd/shcc-cli/)
+COPY cmd/shcc-api/ ./cmd/shcc-api/
+COPY internal/ ./internal/
+COPY install.sh.tmpl ./
+COPY bin/ ./bin/
 
 # Compiler l'API spécifiquement
 RUN CGO_ENABLED=0 GOOS=linux go build -o /shcc-api ./cmd/shcc-api/main.go
@@ -19,7 +22,7 @@ RUN apk --no-cache add ca-certificates
 
 WORKDIR /app
 COPY --from=builder /shcc-api .
-COPY --from=builder /src/cmd/shcc-api/install.sh.tmpl ./cmd/shcc-api/install.sh.tmpl
+COPY --from=builder /src/install.sh.tmpl ./install.sh.tmpl
 COPY --from=builder /src/bin ./bin
 
 # Variable d'environnement par défaut
