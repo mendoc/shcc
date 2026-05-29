@@ -1,0 +1,14 @@
+#!/bin/bash
+set -e
+echo "Installation de shcc depuis http://{{.Host}}..."
+BIN_URL="http://{{.Host}}/bin/shcc-linux"
+INSTALL_DIR="/usr/local/bin"
+
+# Note: Dans un environnement réel, le binaire doit être accessible via cet endpoint ou un bucket S3
+curl -fsSL "$BIN_URL" -o /tmp/shcc
+chmod +x /tmp/shcc
+sudo mkdir -p "$INSTALL_DIR"
+sudo mv /tmp/shcc "$INSTALL_DIR/shcc"
+
+echo "✅ shcc a été installé avec succès."
+shcc status
