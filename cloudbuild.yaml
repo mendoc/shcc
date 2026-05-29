@@ -1,0 +1,15 @@
+steps:
+  # Build de l'image Docker de l'API
+  - name: 'gcr.io/cloud-builders/docker'
+    args: [
+      'build',
+      '-t', 'gcr.io/$PROJECT_ID/shcc-api:$COMMIT_SHA',
+      '-t', 'gcr.io/$PROJECT_ID/shcc-api:latest',
+      '-f', 'cmd/shcc-api/Dockerfile',
+      '.'
+    ]
+
+# Pousser l'image vers Google Artifact Registry / Container Registry
+images:
+  - 'gcr.io/$PROJECT_ID/shcc-api:$COMMIT_SHA'
+  - 'gcr.io/$PROJECT_ID/shcc-api:latest'
