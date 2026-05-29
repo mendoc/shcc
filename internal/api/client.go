@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+
+	"github.com/mendoc/shcc/internal/system"
 )
 
 // BaseURL est l'URL de l'API shcc. Peut être surchargée par SHCC_API_URL
@@ -13,7 +15,7 @@ var BaseURL = "http://localhost:8080"
 
 func init() {
 	if url := os.Getenv("SHCC_API_URL"); url != "" {
-		fmt.Printf("DEBUG: API client init, setting BaseURL to %s\n", url)
+		system.Debug("API client init, setting BaseURL to %s", url)
 		BaseURL = url
 	}
 }
@@ -40,7 +42,6 @@ func RegisterUser(user User) error {
 
 // GetUser récupère les infos d'un utilisateur par email ou nom
 func GetUser(identifier string) (*User, error) {
-	// On tente par email d'abord, puis par nom (l'API gère les deux via query params)
 	url := fmt.Sprintf("%s/user?email=%s", BaseURL, identifier)
 	resp, err := http.Get(url)
 	if err != nil {
@@ -49,7 +50,6 @@ func GetUser(identifier string) (*User, error) {
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusNotFound {
-		// Tentative par nom
 		url = fmt.Sprintf("%s/user?name=%s", BaseURL, identifier)
 		resp, err = http.Get(url)
 		if err != nil {
@@ -93,7 +93,7 @@ func PostShare(payload Share) error {
 // GetShares récupère les partages pour l'utilisateur courant
 func GetShares(email string) ([]Share, error) {
 	url := fmt.Sprintf("%s/share?to=%s", BaseURL, email)
-	fmt.Printf("DEBUG: Appeler %s\n", url)
+	system.Debug("Appeler %s", url)
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
