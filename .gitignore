@@ -1,0 +1,25 @@
+# Binaries
+/shcc
+/shcc-api
+/shcc-api-test
+
+# Environment files
+.env
+
+# Go workspace
+/vendor/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Local configuration
+.shcc/
+id_rsa
+config.json
+
+# IDE / OS files
+.vscode/
+.idea/
+.DS_Store
+*.swp
