@@ -134,9 +134,35 @@ func handleSetName(name string) {
 }
 
 func handleShare(recipientIdentifier string) {
+	creds, err := config.GetCredentials()
+	if err != nil {
+		fmt.Printf("Erreur: impossible de lire les credentials Claude Code (%v)\n", err)
+		return
+	}
+
+	ownerEmail, err := config.GetUserEmail()
+	if err != nil {
+		fmt.Printf("Erreur: impossible de récupérer votre email (%v)\n", err)
+		return
+	}
+
+	// Calcul dynamique de l'expiration
+	var credsParsed config.ClaudeCreds
+	if err := json.Unmarshal([]byte(creds), &credsParsed); err != nil {
+		fmt.Printf("Erreur lors de l'analyse des credentials: %v\n", err)
+		return
+	}
+
+	if credsParsed.ClaudeAiOauth.ExpiresAt < time.Now().UnixMilli() {
+		fmt.Println("Vos credentials sont expirés. Veuillez lancer Claude Code et faire un /login.")
+		return
+	}
+
+	expiry := time.UnixMilli(credsParsed.ClaudeAiOauth.ExpiresAt)
+
 	fmt.Printf("Recherche de l'utilisateur '%s'...\n", recipientIdentifier)
 	
-	_, err := mail.ParseAddress(recipientIdentifier)
+	_, err = mail.ParseAddress(recipientIdentifier)
 	isEmail := (err == nil)
 
 	destUser, err := api.GetUser(recipientIdentifier, isEmail)
@@ -146,27 +172,6 @@ func handleShare(recipientIdentifier string) {
 	}
 
 	fmt.Printf("Utilisateur trouvé : %s (%s)\n", destUser.Name, destUser.Email)
-
-	ownerEmail, err := config.GetUserEmail()
-	if err != nil {
-		fmt.Printf("Erreur: impossible de récupérer votre email (%v)\n", err)
-		return
-	}
-
-	creds, err := config.GetCredentials()
-	if err != nil {
-		fmt.Printf("Erreur: impossible de lire les credentials Claude Code (%v)\n", err)
-		return
-	}
-
-	// Calcul dynamique de l'expiration
-	var credsParsed config.ClaudeCreds
-	var expiry time.Time
-	if err := json.Unmarshal([]byte(creds), &credsParsed); err == nil && credsParsed.ClaudeAiOauth.ExpiresAt > 0 {
-		expiry = time.UnixMilli(credsParsed.ClaudeAiOauth.ExpiresAt)
-	} else {
-		expiry = time.Now().Add(24 * time.Hour)
-	}
 
 	fmt.Println("Chiffrement des credentials...")
 	encrypted, err := auth.EncryptHybrid(destUser.PublicKey, []byte(creds))
