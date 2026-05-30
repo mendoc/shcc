@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"runtime"
 )
 
 // GitHub Release response structure
@@ -47,7 +48,13 @@ func handleUpdate() {
 	}
 
 	// 2. Relancer le script d'installation pour écraser le binaire
-	cmd := exec.Command("sh", "-c", "curl -fsSL https://shcc.ongoua.pro/install.sh | bash")
+	var cmd *exec.Cmd
+	if runtime.GOOS == "windows" {
+		cmd = exec.Command("powershell", "-Command", "irm https://shcc.ongoua.pro/install.ps1 | iex")
+	} else {
+		cmd = exec.Command("sh", "-c", "curl -fsSL https://shcc.ongoua.pro/install.sh | bash")
+	}
+
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
