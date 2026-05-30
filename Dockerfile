@@ -1,5 +1,5 @@
-# Utiliser une version récente de Go
-FROM golang:1.23-alpine AS builder
+# Utiliser une version récente de Go (1.24+ requis par certaines dépendances)
+FROM golang:1.24-alpine AS builder
 
 WORKDIR /src
 
@@ -22,8 +22,9 @@ RUN apk --no-cache add ca-certificates
 
 WORKDIR /app
 COPY --from=builder /shcc-api .
-COPY --from=builder /src/install.sh.tmpl ./install.sh.tmpl
-COPY --from=builder /src/bin ./bin
+COPY install.sh.tmpl ./install.sh.tmpl
+COPY bin/ ./bin/
+COPY migrations/ ./migrations/
 
 # Variable d'environnement par défaut
 ENV PORT=8080
