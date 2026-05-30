@@ -1,0 +1,12 @@
+root = "."
+tmp_dir = "tmp"
+
+[build]
+  cmd = "go build -o ./tmp/shcc-api ./cmd/shcc-api/main.go"
+  bin = "./tmp/shcc-api"
+  include_ext = ["go", "tpl", "tmpl", "html"]
+  exclude_dir = ["assets", "tmp", "vendor", "bin"]
+  delay = 1000
+
+[log]
+  time = true
