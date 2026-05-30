@@ -38,6 +38,7 @@ func main() {
 	http.HandleFunc("/share", handleShare)
 	http.HandleFunc("/user", handleUser)
 	http.HandleFunc("/install.sh", handleInstallScript)
+	http.HandleFunc("/install.ps1", handleInstallPowerShell)
 	http.Handle("/bin/", http.StripPrefix("/bin/", http.FileServer(http.Dir("./bin"))))
 
 	log.Printf("shcc-api à l'écoute sur le port %s", port)
@@ -59,6 +60,24 @@ func handleInstallScript(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/x-shellscript")
+	if err := tmpl.Execute(w, data); err != nil {
+		log.Printf("Erreur execution template: %v", err)
+	}
+}
+
+func handleInstallPowerShell(w http.ResponseWriter, r *http.Request) {
+	tmpl, err := template.ParseFiles("install.ps1.tmpl")
+	if err != nil {
+		http.Error(w, "Erreur serveur", http.StatusInternalServerError)
+		log.Printf("Erreur template: %v", err)
+		return
+	}
+
+	data := map[string]string{
+		"Host": r.Host,
+	}
+
+	w.Header().Set("Content-Type", "application/powershell")
 	if err := tmpl.Execute(w, data); err != nil {
 		log.Printf("Erreur execution template: %v", err)
 	}
@@ -139,15 +158,15 @@ func handleUser(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "JSON invalide", http.StatusBadRequest)
 			return
 		}
-// Upsert sur email
-_, err := database.Pool.Exec(ctx, 
-	`INSERT INTO users (id, name, email, public_key, created_at, updated_at) 
-	 VALUES ($1, $2, $3, $4, NOW(), NOW())
-	 ON CONFLICT (email) DO UPDATE 
-	 SET name = EXCLUDED.name, 
-	     public_key = EXCLUDED.public_key,
-	     updated_at = NOW()`,
-	uuid.New(), u.Name, u.Email, u.PublicKey)
+
+		_, err := database.Pool.Exec(ctx, 
+			`INSERT INTO users (id, name, email, public_key, created_at, updated_at) 
+			 VALUES ($1, $2, $3, $4, NOW(), NOW())
+			 ON CONFLICT (email) DO UPDATE 
+			 SET name = EXCLUDED.name, 
+			     public_key = EXCLUDED.public_key,
+			     updated_at = NOW()`,
+			uuid.New(), u.Name, u.Email, u.PublicKey)
 
 		if err != nil {
 			log.Printf("Erreur upsert user: %v", err)

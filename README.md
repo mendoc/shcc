@@ -21,15 +21,21 @@ Le projet est structuré en Go pour séparer le client de l'API tout en partagea
 
 ## 🛠️ Installation du CLI
 
-### Via script (recommandé)
+### Linux / macOS / WSL
 ```bash
 curl -fsSL https://shcc.ongoua.pro/install.sh | bash
 ```
 
+### Windows (PowerShell)
+Ouvrez PowerShell en tant qu'administrateur et exécutez :
+```powershell
+irm https://shcc.ongoua.pro/install.ps1 | iex
+```
+
 ### Manuellement (depuis les sources)
 ```bash
-go build -o shcc ./cmd/shcc-cli
-mv shcc /usr/local/bin/
+# Compilation des binaires
+./scripts/build.sh
 ```
 
 ## 📖 Utilisation
@@ -44,7 +50,13 @@ shcc status
 shcc name didier
 ```
 
-### 3. Partager ses credentials
+### 3. Synchroniser son profil
+Force la mise à jour de vos infos (nom, email, clé publique) sur le serveur.
+```bash
+shcc sync
+```
+
+### 4. Partager ses credentials
 ```bash
 shcc didier.vincent@gmail.com
 # ou si Didier a configuré son nom :

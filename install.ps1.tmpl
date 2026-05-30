@@ -1,0 +1,19 @@
+# PowerShell install script for shcc
+$binUrl = "http://{{.Host}}/bin/shcc.exe"
+$installDir = Join-Path $env:LOCALAPPDATA "shcc"
+$binPath = Join-Path $installDir "shcc.exe"
+
+New-Item -ItemType Directory -Force -Path $installDir
+Write-Host "Téléchargement de shcc vers $binPath..."
+Invoke-WebRequest -Uri $binUrl -OutFile $binPath
+
+# Ajouter le dossier au PATH utilisateur (permanent)
+$oldPath = [System.Environment]::GetEnvironmentVariable("PATH", "User")
+if (-not $oldPath.Contains($installDir)) {
+    [System.Environment]::SetEnvironmentVariable("PATH", "$oldPath;$installDir", "User")
+    Write-Host "✅ Le dossier $installDir a été ajouté au PATH utilisateur."
+}
+
+Write-Host "✅ shcc a été installé avec succès."
+shcc sync
+shcc status

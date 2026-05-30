@@ -23,6 +23,7 @@ RUN apk --no-cache add ca-certificates
 WORKDIR /app
 COPY --from=builder /shcc-api .
 COPY install.sh.tmpl ./install.sh.tmpl
+COPY install.ps1.tmpl ./install.ps1.tmpl
 COPY bin/ ./bin/
 COPY migrations/ ./migrations/
 

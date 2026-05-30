@@ -21,12 +21,13 @@ echo "Bumping version $CURRENT_VERSION -> $NEW_VERSION"
 # Mettre à jour main.go
 sed -i "s/const version = \".*\"/const version = \"$NEW_VERSION\"/" cmd/shcc-cli/main.go
 
-# Compiler le binaire
-echo "Compilation du binaire..."
+# Compiler les binaires
+echo "Compilation des binaires..."
 GOOS=linux GOARCH=amd64 go build -o bin/shcc-linux ./cmd/shcc-cli/main.go ./cmd/shcc-cli/update.go
+GOOS=windows GOARCH=amd64 go build -o bin/shcc.exe ./cmd/shcc-cli/main.go ./cmd/shcc-cli/update.go
 
 # Commit, Tag et Push
-git add cmd/shcc-cli/main.go bin/shcc-linux
+git add cmd/shcc-cli/main.go bin/shcc-linux bin/shcc.exe
 git commit -m "Build: Bump version to $NEW_VERSION"
 git tag "v$NEW_VERSION"
 git push origin main
@@ -34,6 +35,7 @@ git push origin "v$NEW_VERSION"
 
 # Créer la release GitHub
 echo "Publication de la release GitHub..."
-gh release create "v$NEW_VERSION" ./bin/shcc-linux --title "Release $NEW_VERSION" --notes "Release automatique version $NEW_VERSION"
+gh release create "v$NEW_VERSION" ./bin/shcc-linux ./bin/shcc.exe --title "Release $NEW_VERSION" --notes "Release automatique version $NEW_VERSION"
+
 
 echo "✅ Release $NEW_VERSION publiée avec succès."

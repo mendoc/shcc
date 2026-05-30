@@ -17,22 +17,11 @@ type ClaudeConfig struct {
 	} `json:"oauthAccount"`
 }
 
-// GetUserEmail extrait l'email de ~/.claude.json
-func GetUserEmail() (string, error) {
-	config, err := ReadClaudeConfig()
-	if err != nil {
-		return "", err
-	}
-	return config.OAuthAccount.EmailAddress, nil
-}
-
-// GetUserDisplayName extrait le nom d'affichage de ~/.claude.json
-func GetUserDisplayName() (string, error) {
-	config, err := ReadClaudeConfig()
-	if err != nil {
-		return "", err
-	}
-	return config.OAuthAccount.DisplayName, nil
+// ClaudeCreds définit la structure du JSON de credentials Claude Code
+type ClaudeCreds struct {
+	ClaudeAiOauth struct {
+		ExpiresAt int64 `json:"expiresAt"`
+	} `json:"claudeAiOauth"`
 }
 
 // ReadClaudeConfig lit et parse le fichier ~/.claude.json
@@ -53,19 +42,44 @@ func ReadClaudeConfig() (*ClaudeConfig, error) {
 	return &config, nil
 }
 
-// ClaudeCreds définit la structure du JSON de credentials Claude Code
-type ClaudeCreds struct {
-	ClaudeAiOauth struct {
-		ExpiresAt int64 `json:"expiresAt"`
-	} `json:"claudeAiOauth"`
+// GetUserEmail extrait l'email de ~/.claude.json
+func GetUserEmail() (string, error) {
+	config, err := ReadClaudeConfig()
+	if err != nil {
+		return "", err
+	}
+	return config.OAuthAccount.EmailAddress, nil
+}
+
+// GetUserDisplayName extrait le nom d'affichage de ~/.claude.json
+func GetUserDisplayName() (string, error) {
+	config, err := ReadClaudeConfig()
+	if err != nil {
+		return "", err
+	}
+	return config.OAuthAccount.DisplayName, nil
+}
+
+// GetCredentialsPath renvoie le chemin vers le fichier de credentials selon l'OS
+func GetCredentialsPath() string {
+	home := system.GetHomeDir()
+	
+	// Support spécifique Windows / Linux / WSL
+	// .claude est souvent un dossier caché à la racine du home
+	return filepath.Join(home, ".claude", ".credentials.json")
 }
 
 // GetCredentials lit le contenu du fichier de credentials
 func GetCredentials() (string, error) {
+	if runtime.GOOS == "darwin" {
+		return "", fmt.Errorf("l'accès automatique au Keychain macOS n'est pas implémenté. Veuillez copier vos credentials dans %s", GetCredentialsPath())
+	}
+
 	path := GetCredentialsPath()
-	if runtime.GOOS == "darwin" && path == "macOS Keychain (Claude Code-credentials)" {
-		// Logique Keychain à implémenter plus tard si nécessaire
-		return "", fmt.Errorf("lecture Keychain non implémentée")
+	
+	// Vérification explicite de l'existence
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return "", fmt.Errorf("fichier de credentials introuvable à : %s. Veuillez vous assurer que Claude Code est installé et configuré", path)
 	}
 
 	data, err := os.ReadFile(path)
@@ -74,17 +88,4 @@ func GetCredentials() (string, error) {
 	}
 
 	return string(data), nil
-}
-
-// GetCredentialsPath renvoie le chemin vers le fichier de credentials selon l'OS
-func GetCredentialsPath() string {
-	home := system.GetHomeDir()
-	switch runtime.GOOS {
-	case "windows":
-		return filepath.Join(home, ".claude", ".credentials.json")
-	case "darwin":
-		return "macOS Keychain (Claude Code-credentials)"
-	default: // linux, wsl
-		return filepath.Join(home, ".claude", ".credentials.json")
-	}
 }
