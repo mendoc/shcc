@@ -133,14 +133,15 @@ func handleUser(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "JSON invalide", http.StatusBadRequest)
 			return
 		}
-
-		_, err := database.Pool.Exec(ctx, 
-			`INSERT INTO users (id, name, email, public_key) 
-			 VALUES ($1, $2, $3, $4)
-			 ON CONFLICT (email) DO UPDATE 
-			 SET name = EXCLUDED.name, 
-			     public_key = EXCLUDED.public_key`,
-			uuid.New(), u.Name, u.Email, u.PublicKey)
+// Upsert sur email
+_, err := database.Pool.Exec(ctx, 
+	`INSERT INTO users (id, name, email, public_key, created_at, updated_at) 
+	 VALUES ($1, $2, $3, $4, NOW(), NOW())
+	 ON CONFLICT (email) DO UPDATE 
+	 SET name = EXCLUDED.name, 
+	     public_key = EXCLUDED.public_key,
+	     updated_at = NOW()`,
+	uuid.New(), u.Name, u.Email, u.PublicKey)
 
 		if err != nil {
 			log.Printf("Erreur upsert user: %v", err)
