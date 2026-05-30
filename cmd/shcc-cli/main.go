@@ -219,7 +219,22 @@ func handleReceive() {
 
 	fmt.Printf("%d clé(s) trouvée(s) :\n\n", len(shares))
 	for i, s := range shares {
-		fmt.Printf("[%d] De : %s (Expire le %s)\n", i+1, s.Owner, s.ExpiredAt.Format("02/01/2006 à 15:04"))
+		remaining := time.Until(s.ExpiredAt)
+		
+		// Tenter de récupérer le nom du propriétaire si possible
+		ownerName := s.Owner
+		ownerUser, err := api.GetUser(s.Owner, true)
+		if err == nil {
+			if ownerUser.Name != "" {
+				ownerName = fmt.Sprintf("%s (%s)", ownerUser.Name, s.Owner)
+			}
+		}
+
+		fmt.Printf("[%d] De : %s\n", i+1, ownerName)
+		fmt.Printf("    Partagé le : %s\n", s.CreatedAt.Local().Format("02/01/2006 à 15:04"))
+		fmt.Printf("    Expire le  : %s (dans %s)\n\n", 
+			s.ExpiredAt.Local().Format("02/01/2006 à 15:04"),
+			remaining.Truncate(time.Minute).String())
 	}
 
 	var choice int
