@@ -7,7 +7,10 @@ New-Item -ItemType Directory -Force -Path $installDir
 Write-Host "Téléchargement de shcc vers $binPath..."
 Invoke-WebRequest -Uri $binUrl -OutFile $binPath
 
-# Ajouter le dossier au PATH utilisateur (permanent)
+# 1. Ajouter le dossier au PATH de la session courante pour exécution immédiate
+$env:PATH += ";$installDir"
+
+# 2. Ajouter le dossier au PATH utilisateur de manière permanente
 $oldPath = [System.Environment]::GetEnvironmentVariable("PATH", "User")
 if (-not $oldPath.Contains($installDir)) {
     [System.Environment]::SetEnvironmentVariable("PATH", "$oldPath;$installDir", "User")
