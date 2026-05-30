@@ -2,8 +2,15 @@
 # Script de migration manuel
 # Usage: ./scripts/migrate.sh [up|down|version]
 
-if [ -f .env ]; then
-  export $(grep -v '^#' .env | xargs)
+# Chargement du .env depuis la racine du projet
+ENV_PATH="../.env"
+
+if [ -f "$ENV_PATH" ]; then
+  # On lit le fichier et on exporte les variables (en ignorant les commentaires et lignes vides)
+  export $(grep -v '^#' "$ENV_PATH" | xargs)
+else
+  echo "Erreur: Fichier .env introuvable à $ENV_PATH"
+  exit 1
 fi
 
 if [ -z "$DATABASE_URL" ]; then
@@ -11,6 +18,5 @@ if [ -z "$DATABASE_URL" ]; then
   exit 1
 fi
 
-# Utilisation de l'outil migrate (doit être installé sur la machine)
-# Si non installé, on peut l'installer via : go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
-migrate -path migrations/ -database "$DATABASE_URL" "$@"
+# Utilisation de l'outil migrate
+migrate -path ../migrations/ -database "$DATABASE_URL" "$@"
