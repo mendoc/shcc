@@ -1,4 +1,3 @@
--- 000001_init_schema.up.sql
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY,
     name VARCHAR(255),
@@ -20,7 +19,3 @@ CREATE TABLE IF NOT EXISTS shares (
 CREATE INDEX IF NOT EXISTS idx_shares_to ON shares("to");
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_name ON users(name);
-
--- 000001_init_schema.down.sql
-DROP TABLE IF EXISTS shares;
-DROP TABLE IF EXISTS users;
