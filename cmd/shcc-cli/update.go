@@ -52,5 +52,8 @@ func handleUpdate() {
 	cmd.Stderr = os.Stderr
 	if err := cmd.Run(); err != nil {
 		fmt.Printf("❌ Erreur lors de la mise à jour : %v\n", err)
+	} else {
+		fmt.Println("Synchronisation du profil après mise à jour...")
+		syncUser()
 	}
 }

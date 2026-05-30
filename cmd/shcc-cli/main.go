@@ -31,9 +31,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	// 3. Sync user
-	syncUser()
-
 	if len(os.Args) < 2 {
 		handleReceive()
 		return
@@ -45,6 +42,8 @@ func main() {
 		fmt.Printf("shcc version %s\n", version)
 	case "status":
 		handleStatus()
+	case "sync":
+		handleSync()
 	case "-h", "--help":
 		printHelp()
 	case "update":
@@ -101,6 +100,12 @@ func syncUser() {
 	}
 }
 
+func handleSync() {
+	fmt.Println("Synchronisation du profil avec le serveur...")
+	syncUser()
+	fmt.Println("Synchronisation réussie.")
+}
+
 func handleSetName(name string) {
 	cfg, err := config.ReadShccConfig()
 	if err != nil {
@@ -130,7 +135,7 @@ func handleSetName(name string) {
 
 func handleShare(recipientIdentifier string) {
 	fmt.Printf("Recherche de l'utilisateur '%s'...\n", recipientIdentifier)
-
+	
 	_, err := mail.ParseAddress(recipientIdentifier)
 	isEmail := (err == nil)
 
@@ -261,13 +266,6 @@ func handleStatus() {
 		fmt.Println("Claude Code      : Non détecté")
 	}
 
-	email, err := config.GetUserEmail()
-	if err != nil {
-		fmt.Printf("Email            : Non trouvé\n")
-	} else {
-		fmt.Printf("Email            : %s\n", email)
-	}
-
 	dname, _ := config.GetUserDisplayName()
 	if dname != "" {
 		fmt.Printf("Nom              : %s\n", dname)
@@ -278,6 +276,24 @@ func handleStatus() {
 		fmt.Printf("Nom shcc     :%s\n", shccCfg.Name)
 	}
 
+	email, err := config.GetUserEmail()
+	isSynced := "Non ❌"
+	if err != nil {
+		fmt.Printf("Email            : Non trouvé\n")
+	} else {
+		fmt.Printf("Email            : %s\n", email)
+		// Vérification de la synchro avec l'API
+		remoteUser, err := api.GetUser(email, true)
+		if err == nil {
+			pubKey, _ := auth.GetPublicKey()
+			if remoteUser.PublicKey == pubKey {
+				isSynced = "Oui ✅"
+			}
+		}
+	}
+	
+	fmt.Printf("Synchronisé      : %s\n", isSynced)
+
 	if os.Getenv("DEBUG") == "true" {
 		fmt.Printf("Credentials Path : %s\n", config.GetCredentialsPath())
 	}
@@ -285,5 +301,5 @@ func handleStatus() {
 
 func printHelp() {
 	fmt.Println("Utilisation: shcc <commande>")
-	fmt.Println("Commandes: status, <email|nom>, name <nom>, update, uninstall")
+	fmt.Println("Commandes: status, <email|nom>, name <nom>, update, uninstall, sync")
 }
