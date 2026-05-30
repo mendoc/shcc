@@ -17,10 +17,16 @@ import (
 func main() {
 	// Connexion à la base de données
 	if err := database.Connect(); err != nil {
-		log.Printf("Attention: Connexion DB échouée: %v (L'API tournera en mode dégradé)", err)
+		log.Printf("Attention: Connexion DB échouée: %v", err)
 	} else {
 		defer database.Close()
 		log.Println("Connecté à PostgreSQL")
+		
+		// Lancement des migrations
+		if err := database.RunMigrations(); err != nil {
+			log.Fatalf("Échec des migrations: %v", err)
+		}
+		log.Println("Migrations appliquées avec succès")
 	}
 
 	port := os.Getenv("PORT")
