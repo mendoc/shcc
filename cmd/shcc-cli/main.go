@@ -16,7 +16,7 @@ import (
 	"github.com/mendoc/shcc/internal/system"
 )
 
-const version = "1.7.1"
+const version = "1.8.0"
 
 func main() {
 	// 1. Chargement du .env PRIORITAIRE depuis le répertoire de l'exécutable
