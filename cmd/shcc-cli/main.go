@@ -25,6 +25,9 @@ func main() {
 	envPath := filepath.Join(exPath, ".env")
 	_ = godotenv.Load(envPath)
 
+	// Initialiser l'API avec la configuration chargée
+	api.Init()
+
 	// 2. Initialisation des clés RSA locales
 	if err := auth.EnsureKeys(); err != nil {
 		fmt.Printf("Erreur d'initialisation des clés: %v\n", err)
@@ -126,10 +129,12 @@ func handleSetName(name string) {
 		PublicKey: pubKey,
 	})
 
-	if err != nil {
-		fmt.Printf("Nom enregistré localement mais erreur de synchro API: %v\n", err)
+	if err == api.ErrNameTaken {
+		fmt.Printf("❌ Ce nom est déjà utilisé par un autre utilisateur.\n")
+	} else if err != nil {
+		fmt.Printf("❌ Erreur lors de la synchro : %v\n", err)
 	} else {
-		fmt.Printf("Nom '%s' enregistré et synchronisé avec succès.\n", name)
+		fmt.Printf("✅ Nom '%s' enregistré et synchronisé avec succès.\n", name)
 	}
 }
 
@@ -137,12 +142,6 @@ func handleShare(recipientIdentifier string) {
 	creds, err := config.GetCredentials()
 	if err != nil {
 		fmt.Printf("Erreur: impossible de lire les credentials Claude Code (%v)\n", err)
-		return
-	}
-
-	ownerEmail, err := config.GetUserEmail()
-	if err != nil {
-		fmt.Printf("Erreur: impossible de récupérer votre email (%v)\n", err)
 		return
 	}
 
@@ -172,6 +171,12 @@ func handleShare(recipientIdentifier string) {
 	}
 
 	fmt.Printf("Utilisateur trouvé : %s (%s)\n", destUser.Name, destUser.Email)
+
+	ownerEmail, err := config.GetUserEmail()
+	if err != nil {
+		fmt.Printf("Erreur: impossible de récupérer votre email (%v)\n", err)
+		return
+	}
 
 	fmt.Println("Chiffrement des credentials...")
 	encrypted, err := auth.EncryptHybrid(destUser.PublicKey, []byte(creds))
@@ -219,22 +224,11 @@ func handleReceive() {
 
 	fmt.Printf("%d clé(s) trouvée(s) :\n\n", len(shares))
 	for i, s := range shares {
-		remaining := time.Until(s.ExpiredAt)
-		
-		// Tenter de récupérer le nom du propriétaire si possible
-		ownerName := s.Owner
-		ownerUser, err := api.GetUser(s.Owner, true)
-		if err == nil {
-			if ownerUser.Name != "" {
-				ownerName = fmt.Sprintf("%s (%s)", ownerUser.Name, s.Owner)
-			}
-		}
-
-		fmt.Printf("[%d] De : %s\n", i+1, ownerName)
+		fmt.Printf("[%d] De : %s\n", i+1, s.Owner)
 		fmt.Printf("    Partagé le : %s\n", s.CreatedAt.Local().Format("02/01/2006 à 15:04"))
 		fmt.Printf("    Expire le  : %s (dans %s)\n\n", 
 			s.ExpiredAt.Local().Format("02/01/2006 à 15:04"),
-			remaining.Truncate(time.Minute).String())
+			time.Until(s.ExpiredAt).Truncate(time.Minute).String())
 	}
 
 	var choice int
@@ -286,16 +280,6 @@ func handleStatus() {
 		fmt.Println("Claude Code      : Non détecté")
 	}
 
-	dname, _ := config.GetUserDisplayName()
-	if dname != "" {
-		fmt.Printf("Nom              : %s\n", dname)
-	}
-
-	shccCfg, _ := config.ReadShccConfig()
-	if shccCfg.Name != "" {
-		fmt.Printf("Nom shcc     :%s\n", shccCfg.Name)
-	}
-
 	email, err := config.GetUserEmail()
 	isSynced := "Non ❌"
 	if err != nil {
@@ -311,7 +295,16 @@ func handleStatus() {
 			}
 		}
 	}
-	
+
+	dname, _ := config.GetUserDisplayName()
+	shccCfg, _ := config.ReadShccConfig()
+
+	if shccCfg.Name != "" {
+		fmt.Printf("Nom              : %s\n", shccCfg.Name)
+	} else if dname != "" {
+		fmt.Printf("Nom              : %s\n", dname)
+	}
+
 	fmt.Printf("Synchronisé      : %s\n", isSynced)
 
 	if os.Getenv("DEBUG") == "true" {
