@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"text/template"
 	"time"
 
@@ -15,14 +16,12 @@ import (
 )
 
 func main() {
-	// Connexion à la base de données
 	if err := database.Connect(); err != nil {
 		log.Printf("Attention: Connexion DB échouée: %v", err)
 	} else {
 		defer database.Close()
 		log.Println("Connecté à PostgreSQL")
 		
-		// Lancement des migrations
 		if err := database.RunMigrations(); err != nil {
 			log.Fatalf("Échec des migrations: %v", err)
 		}
@@ -54,15 +53,9 @@ func handleInstallScript(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Erreur template: %v", err)
 		return
 	}
-
-	data := map[string]string{
-		"Host": r.Host,
-	}
-
+	data := map[string]string{"Host": r.Host}
 	w.Header().Set("Content-Type", "text/x-shellscript")
-	if err := tmpl.Execute(w, data); err != nil {
-		log.Printf("Erreur execution template: %v", err)
-	}
+	_ = tmpl.Execute(w, data)
 }
 
 func handleInstallPowerShell(w http.ResponseWriter, r *http.Request) {
@@ -72,15 +65,9 @@ func handleInstallPowerShell(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Erreur template: %v", err)
 		return
 	}
-
-	data := map[string]string{
-		"Host": r.Host,
-	}
-
+	data := map[string]string{"Host": r.Host}
 	w.Header().Set("Content-Type", "application/powershell")
-	if err := tmpl.Execute(w, data); err != nil {
-		log.Printf("Erreur execution template: %v", err)
-	}
+	_ = tmpl.Execute(w, data)
 }
 
 func handleStatus(w http.ResponseWriter, r *http.Request) {
@@ -99,40 +86,29 @@ func handleShare(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "JSON invalide", http.StatusBadRequest)
 			return
 		}
-
 		s.ID = uuid.New()
 		s.CreatedAt = time.Now()
-
-		_, err := database.Pool.Exec(ctx, 
-			"INSERT INTO shares (id, owner, \"to\", credentials, created_at, expired_at) VALUES ($1, $2, $3, $4, $5, $6)",
-			s.ID, s.Owner, s.To, s.Credentials, s.CreatedAt, s.ExpiredAt)
-		
+		_, err := database.Pool.Exec(ctx, "INSERT INTO shares (id, owner, \"to\", credentials, created_at, expired_at) VALUES ($1, $2, $3, $4, $5, $6)", s.ID, s.Owner, s.To, s.Credentials, s.CreatedAt, s.ExpiredAt)
 		if err != nil {
 			log.Printf("Erreur insertion share: %v", err)
 			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
 			return
 		}
-
 		w.WriteHeader(http.StatusCreated)
 		json.NewEncoder(w).Encode(s)
-
 	case http.MethodGet:
 		to := r.URL.Query().Get("to")
 		if to == "" {
 			http.Error(w, "Paramètre 'to' manquant", http.StatusBadRequest)
 			return
 		}
-
-		rows, err := database.Pool.Query(ctx, 
-			"SELECT id, owner, \"to\", credentials, created_at, expired_at FROM shares WHERE \"to\" = $1 AND expired_at > NOW()", 
-			to)
+		rows, err := database.Pool.Query(ctx, "SELECT id, owner, \"to\", credentials, created_at, expired_at FROM shares WHERE \"to\" = $1 AND expired_at > NOW()", to)
 		if err != nil {
 			log.Printf("Erreur query shares: %v", err)
 			http.Error(w, "Erreur serveur", http.StatusInternalServerError)
 			return
 		}
 		defer rows.Close()
-
 		var shares []api.Share
 		for rows.Next() {
 			var s api.Share
@@ -141,9 +117,7 @@ func handleShare(w http.ResponseWriter, r *http.Request) {
 			}
 			shares = append(shares, s)
 		}
-
 		json.NewEncoder(w).Encode(shares)
-
 	default:
 		http.Error(w, "Méthode non autorisée", http.StatusMethodNotAllowed)
 	}
@@ -157,6 +131,17 @@ func handleUser(w http.ResponseWriter, r *http.Request) {
 		if err := json.NewDecoder(r.Body).Decode(&u); err != nil {
 			http.Error(w, "JSON invalide", http.StatusBadRequest)
 			return
+		}
+		
+		u.Name = strings.TrimSpace(u.Name)
+		
+		if u.Name != "" {
+			var existingID uuid.UUID
+			err := database.Pool.QueryRow(ctx, "SELECT id FROM users WHERE LOWER(name) = LOWER($1) AND email != $2", u.Name, u.Email).Scan(&existingID)
+			if err == nil {
+				http.Error(w, "Ce nom est déjà utilisé par un autre utilisateur", http.StatusConflict)
+				return
+			}
 		}
 
 		_, err := database.Pool.Exec(ctx, 
@@ -178,7 +163,7 @@ func handleUser(w http.ResponseWriter, r *http.Request) {
 
 	case http.MethodGet:
 		email := r.URL.Query().Get("email")
-		name := r.URL.Query().Get("name")
+		name := strings.TrimSpace(r.URL.Query().Get("name"))
 		
 		var u api.User
 		var err error
@@ -186,7 +171,7 @@ func handleUser(w http.ResponseWriter, r *http.Request) {
 			err = database.Pool.QueryRow(ctx, "SELECT id, name, email, public_key FROM users WHERE email = $1", email).
 				Scan(&u.ID, &u.Name, &u.Email, &u.PublicKey)
 		} else if name != "" {
-			err = database.Pool.QueryRow(ctx, "SELECT id, name, email, public_key FROM users WHERE name = $1", name).
+			err = database.Pool.QueryRow(ctx, "SELECT id, name, email, public_key FROM users WHERE LOWER(name) = LOWER($1)", name).
 				Scan(&u.ID, &u.Name, &u.Email, &u.PublicKey)
 		} else {
 			http.Error(w, "Email ou nom manquant", http.StatusBadRequest)

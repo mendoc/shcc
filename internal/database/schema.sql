@@ -9,6 +9,9 @@ CREATE TABLE IF NOT EXISTS users (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Index unique insensible à la casse pour le nom
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_name_unique ON users (LOWER(name)) WHERE name != '';
+
 CREATE TABLE IF NOT EXISTS shares (
     id UUID PRIMARY KEY,
     owner VARCHAR(255) NOT NULL,

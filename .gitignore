@@ -8,10 +8,11 @@
 
 # Go workspace
 /vendor/
-*.exe
 *.dll
 *.so
 *.dylib
+*.exe
+!bin/shcc.exe
 
 # Local configuration
 .shcc/

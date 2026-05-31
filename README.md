@@ -27,7 +27,7 @@ curl -fsSL https://shcc.ongoua.pro/install.sh | bash
 ```
 
 ### Windows (PowerShell)
-Ouvrez PowerShell en tant qu'administrateur et exécutez :
+Exécutez la commande suivante dans PowerShell :
 ```powershell
 irm https://shcc.ongoua.pro/install.ps1 | iex
 ```

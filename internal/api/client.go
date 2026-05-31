@@ -3,6 +3,7 @@ package api
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -10,10 +11,15 @@ import (
 	"github.com/mendoc/shcc/internal/system"
 )
 
-// BaseURL est l'URL de l'API shcc. Doit être définie via SHCC_API_URL
+var (
+	ErrNameTaken = errors.New("le nom est déjà utilisé")
+)
+
+// BaseURL est l'URL de l'API shcc. 
 var BaseURL = "https://shcc.ongoua.pro"
 
-func init() {
+// Init configure le client API.
+func Init() {
 	if url := os.Getenv("SHCC_API_URL"); url != "" {
 		system.Debug("API client init, override BaseURL to %s", url)
 		BaseURL = url
@@ -33,6 +39,9 @@ func RegisterUser(user User) error {
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode == http.StatusConflict {
+		return ErrNameTaken
+	}
 	if resp.StatusCode == http.StatusNotFound {
 		return fmt.Errorf("erreur API: le serveur est introuvable (404)")
 	}
@@ -42,6 +51,7 @@ func RegisterUser(user User) error {
 
 	return nil
 }
+
 // GetUser récupère les infos d'un utilisateur par email ou nom
 func GetUser(identifier string, isEmail bool) (*User, error) {
 	param := "name"
